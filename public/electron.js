@@ -2,6 +2,7 @@
 const { app, BrowserWindow, Menu, ipcMain, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const xlsx = require('xlsx');
 
 let mainWindow;
 
@@ -72,19 +73,16 @@ ipcMain.handle('add-company', async (event, companyName, companyPath) => {
 // Получение списка компаний
 ipcMain.handle('get-companies', async () => {
   // Чтение файла companies.json
-  console.log(companyDataPath)
+  //console.log(companyDataPath)
   if (fs.existsSync(companyDataPath)) {
     const fileContent = fs.readFileSync(companyDataPath);
-    let companies = JSON.parse(fileContent)
-    console.log(companies)
+    //let companies = JSON.parse(fileContent)
+    //console.log(companies)
     return JSON.parse(fileContent);
   }
 
   return [];
 });
-
-
-
 
 // Ловим событие от рендера (React) для поиска файлов в папке и подпапках
 ipcMain.handle('search-files', async (event, folderName, searchTerm, pathToBaseDir) => {
@@ -104,6 +102,23 @@ ipcMain.handle('search-files', async (event, folderName, searchTerm, pathToBaseD
   return filteredFiles.length > 0 ? filteredFiles : ['Tiedostoa ei löydy.'];
 });
 
+// Ловим событие от рендера (React) для поиска файлов в папке и подпапках
+ipcMain.handle('search-files-saha', async (event, folderName, searchTerm, malliToBaseDir) => {
+  const folderPath = path.join(malliToBaseDir, folderName);
+
+  if (!fs.existsSync(folderPath)) {
+    return [`Kansiota "${folderName}" ei löydy`];
+  }
+
+  const files = fs.readdirSync(folderPath);
+  const excelFiles = files.filter(file => file.endsWith('.xlsx') || file.endsWith('.xls'));
+
+  const filteredFiles = searchTerm
+    ? excelFiles.filter(file => file.toLowerCase().includes(searchTerm.toLowerCase()))
+    : excelFiles;
+
+  return filteredFiles.length > 0 ? filteredFiles : ['Tiedostoa ei löydy.'];
+});
 
 
 /*
@@ -200,6 +215,62 @@ ipcMain.handle('copy-and-rename-excel-file', async (event, folderName, searchTer
   // Копируем файл
   try {
     fs.copyFileSync(foundFile, destinationPath);
+    return `Tiedosto ${upperFolderName} kopioitiin onnistuneesti kansioon ${folderPath}.`;
+  } catch (error) {
+    console.error('Virhe kopioitaessa tiedostoa:', error);
+    return `Virhe kopioitaessa tiedostoa: ${error.message}`;
+  }
+});
+
+
+ipcMain.handle('copy-and-rename-excel-file-saha', async (event, folderName, searchTerm, malliToBaseDir, material, sahaMitat) => {
+  const upperFolderName = folderName.toUpperCase();
+  const upperSearchTerm = searchTerm.toUpperCase();
+  
+  const folderPath = path.join(malliToBaseDir, upperFolderName);
+  const folderFrom = path.join(malliToBaseDir, 'POHJA', "SAHAMIT.xlsx");
+
+  if (!folderFrom) {
+    console.error(`Tiedosto-mallia SAHAMIT.xlsx ei löydy.`);
+    return `Tiedosto-mallia SAHAMIT.xlsx ei löydy.`;
+  }
+
+  if (!fs.existsSync(folderFrom)) {
+    console.error(`Polkua ${folderFrom} ei löydy.`);
+    return `Polkua ${folderFrom} ei löydy.`;
+  }
+
+  const date = new Date();
+  const day = String(date.getDate()).padStart(2,"0");
+  const month = String(date.getMonth()+1).padStart(2, "0");
+  const year = String(date.getFullYear()).slice(-2);
+  const formattedDate = `${day}${month}${year}`;
+
+  const newFileName = `${upperFolderName}M_${upperSearchTerm}_${formattedDate}.xlsx`;
+  console.log(newFileName)
+  const destinationPath = path.join(folderPath, newFileName);
+
+  if (!fs.existsSync(folderPath)) {
+    fs.mkdirSync(folderPath, { recursive: true });
+  }
+
+  // Копируем файл
+  try {
+    fs.copyFileSync(folderFrom, destinationPath);
+
+    // Открываем скопированный файл для редактирования
+    const workbook = xlsx.readFile(destinationPath);
+    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+
+    // Добавляем данные в ячейку B6, B7 и B8
+    worksheet['B6'] = { t: 's', v: searchTerm }; // Задаем новое значение для ячейки B6
+    worksheet['B7'] = { t: 's', v: material };
+    worksheet['B7'] = { t: 's', v: sahaMitat };
+
+
+    // Сохраняем изменения в файле
+    xlsx.writeFile(workbook, destinationPath);
+
     return `Tiedosto ${upperFolderName} kopioitiin onnistuneesti kansioon ${folderPath}.`;
   } catch (error) {
     console.error('Virhe kopioitaessa tiedostoa:', error);

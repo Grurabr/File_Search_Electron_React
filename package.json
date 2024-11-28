@@ -22,7 +22,9 @@
   "dependencies": {
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
-    "react-scripts": "^5.0.0"
+    "react-scripts": "^5.0.0",
+    "react-tabs": "^6.0.2",
+    "xlsx": "^0.18.5"
   },
   "browserslist": {
     "production": [
@@ -50,12 +52,14 @@
       "target": [
         {
           "target": "portable",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "assets/icon.ico",
       "signAndEditExecutable": false,
-      "sign": false                      
+      "sign": false
     }
   }
 }

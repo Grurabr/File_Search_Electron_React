@@ -20,7 +20,6 @@ body {
 }
 
 .scrollable-table {
-  max-height: 400px;
   overflow-y: auto;
   border: 1px solid #ccc;
   border-radius: 4px;
@@ -81,4 +80,30 @@ a:hover {
   flex: 0 0 50%; 
   box-sizing: border-box; 
   padding: 5px; 
+}
+
+.my-tab-list {
+  display: flex; /* Размещаем вкладки горизонтально */
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  width: 95%;
+}
+
+.my-tab {
+  padding: 10px 20px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  border-bottom: none;
+  margin-right: 5px;
+  transition: background-color 0.3s, border-color 0.3s;
+}
+
+.my-tab:hover {
+  background-color: #f0f0f0;
+}
+
+.my-selected-tab {
+  background-color: #c9859c;
+  color: white;
 }

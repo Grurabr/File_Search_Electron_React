@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
 import './App.css';
 
 function App() {
@@ -7,6 +8,12 @@ function App() {
 
   const [asiakasNimi, setAsiakasNimi] = useState('');
   const [asiakasPath, setAsiakasPath] = useState('');
+
+  const [material, setMaterial] = useState('');
+  const [sahaMitat, setSahaMitat] = useState('');
+
+  const [malliToBaseDir, setMalliToBaseDir] = useState('T:\\Yhteiset\\LAATU\\SAHAUS');
+
 
   const [searchResults, setSearchResults] = useState([]);
   const [companies, setCompanies] = useState([]);
@@ -51,10 +58,31 @@ function App() {
       setErrorMessage('Nimikenumero puuttuu!');
       return;
     }
-
+    
     //setErrorMessage('');
+
     // Обращаемся к Electron для поиска файлов
     const results = await window.electronAPI.searchFiles(folderName, searchTerm, pathToBaseDir);
+
+    if (results[0] === `Kansiota "${folderName}" ei löydy`) {
+      setNoResults(true); // Устанавливаем состояние для отображения кнопки создания
+      setSearchResults([]); // Очищаем результаты поиска
+    } else {
+      setSearchResults(results);
+      setNoResults(results.length === 0 || results[0] === 'Tiedostoa ei löydy.'); // Устанавливаем флаг при отсутствии результатов
+    }
+  };
+
+  const handleSearchSaha = async () => {
+    if (!folderName) {
+      setErrorMessage('Nimikenumero puuttuu!');
+      return;
+    }
+    
+    //setErrorMessage('');
+
+    // Обращаемся к Electron для поиска файлов
+    const results = await window.electronAPI.searchFiles(folderName, searchTerm, malliToBaseDir);
 
     if (results[0] === `Kansiota "${folderName}" ei löydy`) {
       setNoResults(true); // Устанавливаем состояние для отображения кнопки создания
@@ -84,6 +112,7 @@ function App() {
       setErrorMessage('Työnumero puuttuu!');
       return;
     }
+
     if (!selectedCompany) {
       setErrorMessage('Yritystä ei ole valittu!');
       return;
@@ -99,6 +128,25 @@ function App() {
       const result = await window.electronAPI.copyAndRenameExcelFile(folderName, searchTerm, selectedCompanyObject.path, pathToBaseDir);
       setErrorMessage(result)
       //alert(result); // Выводим сообщение об успешном копировании и переименовании
+
+    } catch (error) {
+      console.error('Virhe:', error);
+    }
+  };
+
+  const handleCopyAndRenameFileSaha = async () => {
+    if (!folderName) {
+      setErrorMessage('Nimikenumero puuttuu!');
+      return;
+    }
+    if (!searchTerm) {
+      setErrorMessage('Työnumero puuttuu!');
+      return;
+    }
+
+    try {
+      const result = await window.electronAPI.copyAndRenameExcelFileSaha(folderName, searchTerm, malliToBaseDir, material, sahaMitat);
+      setErrorMessage(result)
 
     } catch (error) {
       console.error('Virhe:', error);
@@ -129,164 +177,328 @@ function App() {
       return;
     }
 
-    if (!selectedCompany) {
-      setErrorMessage("Asiakas puuttuu!")
+    if (!folderName) {
+      setErrorMessage("Nimikenumero puuttuu!")
       return;
     }
-
+    
     setErrorMessage('');
     await handleCopyAndRenameFile();
     await handleSearch()
   };
 
+  const handleCreateFileSaha = async () => {
+    if (!searchTerm) {
+      setErrorMessage('Työnumero puuttuu!');
+      return;
+    }
+
+    if (!folderName) {
+      setErrorMessage("Nimikenumero puuttuu!")
+      return;
+    }
+    
+    setErrorMessage('');
+    await handleCopyAndRenameFileSaha();
+    await handleSearchSaha()
+  };
+
   return (
-    <div style={{ padding: '20px' }}>
-      <h1>Mittauspöytäkirjan haku</h1>
 
-      {errorMessage && <p style={{ color: 'blue' }}>{errorMessage}</p>}
+    <div className="App">
+      <Tabs>
+        <TabList className="my-tab-list">
+          <Tab className="my-tab" selectedClassName="my-selected-tab">Haku</Tab>
+          <Tab className="my-tab" selectedClassName="my-selected-tab">Saha</Tab>
+          <Tab className="my-tab" selectedClassName="my-selected-tab">Laatu</Tab>
+        </TabList>
 
-      <div>
-        <input
-          type="checkbox"
-          id="path"
-          name="path"
-          checked={pathCheckbox}
-          onChange={() => setPathCheckbox(!pathCheckbox)} />
-        <label for="path">Options</label>
-      </div>
+        <TabPanel>
+          {/* Haku */}
+          <div style={{ padding: '20px' }}>
 
-      {pathCheckbox && (
-        <div style={{ marginTop: "10px" }}>
+            {errorMessage && <p style={{ color: 'blue' }}>{errorMessage}</p>}
 
-          <input
-            type='text'
-            id='baseDirPath'
-            value={pathToBaseDir}
-            onChange={(e) => setPathToBaseDir(e.target.value)}
-            style={{ marginRight: "10px" }} />
-          <label htmlFor="baseDirPath">Mittauspöytäkirjan kansiopolku</label>
-          <br />
-
-
-          <input
-            type='text'
-            id='uusiAsiakasNimi'
-            value={asiakasNimi}
-            onChange={(e) => setAsiakasNimi(e.target.value)}
-            style={{ marginRight: "10px" }} />
-          <label htmlFor="uusiAsiakasNimi">Uusi asiakas</label>
-          <br />
-
-
-          <input
-            type='text'
-            id='uusiAsiakasPath'
-            value={asiakasPath}
-            onChange={(e) => setAsiakasPath(e.target.value)}
-            style={{ marginRight: "10px" }} />
-          <label htmlFor="uusiAsiakasPath">Polku</label>
-          <br />
-          <br />
-
-          <button onClick={handleUusiAsiakas}>Uusi asiakas</button>
-          <br />
-          <br />
-        </div>
-      )}
-      <div>{/* Ввод данных поиска */}
-
-        <div>
-          <input
-            type="text"
-            placeholder="Nimikenumero"
-            value={folderName}
-            onChange={(e) => setFolderName(e.target.value)}
-            style={{ marginRight: '10px' }}
-          />
-        </div>
-
-        <div style={{ marginTop: '10px' }}>
-          <input
-            type="text"
-            placeholder="Työnumero"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            style={{ marginRight: '10px' }}
-          />
-        </div>
-        <button onClick={handleSearch}>Haku</button>
-      </div>
-
-      {/* Таблица с результатами поиска */}
-      <div style={{ marginTop: '20px' }}>
-
-        {searchResults.length > 0 && searchResults[0] !== 'Tiedostoa ei löydy.' ? (
-          <div className="scrollable-table">
-            <h3>Tulos:</h3>
-            <table border="1" cellPadding="10" cellSpacing="0">
-              <thead>
-                <tr>
-                  <th><strong>Nimikenumero</strong></th>
-                  <th><strong>Työnumero</strong></th>
-                  <th><strong>Päivämäärä</strong></th>
-                </tr>
-              </thead>
-              <tbody>
-                {searchResults.map((file, index) => {
-                  const fileName = file.split('\\').pop();
-                  const [nimikenumero, tilausnumero, datePart] = fileName.replace('.xlsx', '').replace('.xls', '').split('_');
-                  const formattedDate = formatDate(datePart);
-
-                  return (
-                    <tr key={index}>
-                      <td>{nimikenumero}</td>
-                      <td>
-                        <button
-                          onClick={() => handleOpenFile(file)}
-                          style={{
-                            color: 'blue',
-                            textDecoration: 'underline',
-                            background: 'none',
-                            border: 'none',
-                            padding: 0,
-                            cursor: 'pointer',
-                          }}
-                        >
-                          {tilausnumero}
-                        </button>
-                      </td>
-                      <td>{formattedDate}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          noResults && (
             <div>
-              <p>Tiedostoa ei löydy.</p>
-              <div style={{ marginBottom: '20px' }}>
-                <label>Valitse asiakas:</label>
-                <select
-                  value={selectedCompany}
-                  onChange={(e) => setSelectedCompany(e.target.value)}>
-                  <option value="" disabled>Valitse asiakas...</option>
-                  {companies.map((company, index) => (
-                    <option key={index} value={company.name}>
-                      {company.name}
-                    </option>
-                  ))}
-                </select>
+              <input
+                type="checkbox"
+                id="path"
+                name="path"
+                checked={pathCheckbox}
+                onChange={() => setPathCheckbox(!pathCheckbox)} />
+              <label for="path">Options</label>
+            </div>
+
+            {pathCheckbox && (
+              <div style={{ marginTop: "10px" }}>
+
+                <input
+                  type='text'
+                  id='baseDirPath'
+                  value={pathToBaseDir}
+                  onChange={(e) => setPathToBaseDir(e.target.value)}
+                  style={{ marginRight: "10px" }} />
+                <label htmlFor="baseDirPath">Mittauspöytäkirjan kansiopolku</label>
+                <br />
+
+
+                <input
+                  type='text'
+                  id='uusiAsiakasNimi'
+                  value={asiakasNimi}
+                  onChange={(e) => setAsiakasNimi(e.target.value)}
+                  style={{ marginRight: "10px" }} />
+                <label htmlFor="uusiAsiakasNimi">Uusi asiakas</label>
+                <br />
+
+
+                <input
+                  type='text'
+                  id='uusiAsiakasPath'
+                  value={asiakasPath}
+                  onChange={(e) => setAsiakasPath(e.target.value)}
+                  style={{ marginRight: "10px" }} />
+                <label htmlFor="uusiAsiakasPath">Polku</label>
+                <br />
+                <br />
+
+                <button onClick={handleUusiAsiakas}>Uusi asiakas</button>
+                <br />
+                <br />
+              </div>
+            )}
+            <div>{/* Ввод данных поиска */}
+
+              <div style={{ marginTop: '10px' }}>
+                <input
+                  type="text"
+                  placeholder="Nimikenumero"
+                  value={folderName}
+                  onChange={(e) => setFolderName(e.target.value)}
+                  style={{ marginRight: '10px' }}
+                />
+                <br />
+                <input
+                  type="text"
+                  placeholder="Työnumero"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  style={{ marginRight: '10px' }}
+                />
+              </div>
+              <button onClick={handleSearch}>Haku</button>
+            </div>
+
+            {/* Таблица с результатами поиска */}
+            <div style={{ marginTop: '20px' }}>
+
+              {searchResults.length > 0 && searchResults[0] !== 'Tiedostoa ei löydy.' ? (
+                <div className="scrollable-table">
+                  <h3>Tulos:</h3>
+                  <table border="1" cellPadding="10" cellSpacing="0">
+                    <thead>
+                      <tr>
+                        <th><strong>Nimikenumero</strong></th>
+                        <th><strong>Työnumero</strong></th>
+                        <th><strong>Päivämäärä</strong></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {searchResults.map((file, index) => {
+                        const fileName = file.split('\\').pop();
+                        const [nimikenumero, tilausnumero, datePart] = fileName.replace('.xlsx', '').replace('.xls', '').split('_');
+                        const formattedDate = formatDate(datePart);
+
+                        return (
+                          <tr key={index}>
+                            <td>{nimikenumero}</td>
+                            <td>
+                              <button
+                                onClick={() => handleOpenFile(file)}
+                                style={{
+                                  color: 'blue',
+                                  textDecoration: 'underline',
+                                  background: 'none',
+                                  border: 'none',
+                                  padding: 0,
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                {tilausnumero}
+                              </button>
+                            </td>
+                            <td>{formattedDate}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                noResults && (
+                  <div>
+                    <p>Tiedostoa ei löydy.</p>
+                    <div style={{ marginBottom: '20px' }}>
+                      <label>Valitse asiakas:</label>
+                      <select
+                        value={selectedCompany}
+                        onChange={(e) => setSelectedCompany(e.target.value)}>
+                        <option value="" disabled>Valitse asiakas...</option>
+                        {companies.map((company, index) => (
+                          <option key={index} value={company.name}>
+                            {company.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+
+                    <button onClick={handleCreateFile}>Luo uusi mittauspöytäkirja</button>
+                  </div>
+                )
+              )}
+            </div>
+          </div>
+        </TabPanel>
+
+        <TabPanel>
+          {/* Saha */}
+          <div style={{ padding: '20px' }}>
+
+            {errorMessage && <p style={{ color: 'blue' }}>{errorMessage}</p>}
+
+            <div>
+              <input
+                type="checkbox"
+                id="path"
+                name="path"
+                checked={pathCheckbox}
+                onChange={() => setPathCheckbox(!pathCheckbox)} />
+              <label for="path">Options</label>
+            </div>
+
+            {pathCheckbox && (
+              <div style={{ marginTop: "10px" }}>
+                <input
+                  type='text'
+                  id='malliDirPath'
+                  value={malliToBaseDir}
+                  onChange={(e) => setMalliToBaseDir(e.target.value)}
+                  style={{ marginRight: "10px" }} />
+                <label htmlFor="malliDirPath">Malli kansiopolku</label>
+                <br />
+              </div>
+            )}
+            <div>
+
+              <div style={{ marginTop: '10px' }}>
+                <input
+                  type="text"
+                  placeholder="Nimikenumero"
+                  value={folderName}
+                  onChange={(e) => setFolderName(e.target.value)}
+                  style={{ marginRight: '10px' }}
+                />
+                <br />
+
+                <input
+                  type="text"
+                  placeholder="Työnumero"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  style={{ marginRight: '10px' }}
+                />
+                <br />
               </div>
 
-
-              <button onClick={handleCreateFile}>Luo uusi mittauspöytäkirja</button>
+              <button onClick={handleSearchSaha}>Haku</button>
             </div>
-          )
-        )}
-      </div>
+
+
+            {/* Таблица с результатами поиска */}
+            <div style={{ marginTop: '20px' }}>
+
+              {searchResults.length > 0 && searchResults[0] !== 'Tiedostoa ei löydy.' ? (
+                <div className="scrollable-table">
+                  <h3>Tulos:</h3>
+                  <table border="1" cellPadding="10" cellSpacing="0">
+                    <thead>
+                      <tr>
+                        <th><strong>Nimikenumero</strong></th>
+                        <th><strong>Työnumero</strong></th>
+                        <th><strong>Päivämäärä</strong></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {searchResults.map((file, index) => {
+                        const fileName = file.split('\\').pop();
+                        const [nimikenumero, tilausnumero, datePart] = fileName.replace('.xlsx', '').replace('.xls', '').split('_');
+                        const formattedDate = formatDate(datePart);
+
+                        return (
+                          <tr key={index}>
+                            <td>{nimikenumero}</td>
+                            <td>
+                              <button
+                                onClick={() => handleOpenFile(file)}
+                                style={{
+                                  color: 'blue',
+                                  textDecoration: 'underline',
+                                  background: 'none',
+                                  border: 'none',
+                                  padding: 0,
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                {tilausnumero}
+                              </button>
+                            </td>
+                            <td>{formattedDate}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                noResults && (
+                  <div>
+                    <p>Tiedostoa ei löydy.</p>
+                    <div style={{ marginTop: '10px', marginBottom: "10px" }}>
+                      <input
+                        type='text'
+                        id='sahaMitat'
+                        placeholder='Ø tai sivu*sivu'
+                        value={sahaMitat}
+                        onChange={(e) => setSahaMitat(e.target.value)}
+                        style={{ marginRight: "10px" }} />
+                      <label htmlFor="sahaMitat">Mitat</label>
+                      <br />
+                      <input
+                        type='text'
+                        id='material'
+                        placeholder='Materiaali'
+                        value={material}
+                        onChange={(e) => setMaterial(e.target.value)}
+                        style={{ marginRight: "10px" }} />
+                      <label htmlFor="material">Materiaali</label>
+                      <br />
+                    </div>
+
+                    <button onClick={handleCreateFileSaha}>Luo uusi mittauspöytäkirja</button>
+                  </div>
+                )
+              )}
+            </div>
+          </div>
+        </TabPanel>
+
+        <TabPanel>
+          
+        </TabPanel>
+      </Tabs>
     </div>
+
   );
 }
 
