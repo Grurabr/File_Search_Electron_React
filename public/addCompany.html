@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Добавить компанию</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    input {
+      margin-bottom: 10px;
+      width: 100%;
+    }
+    button {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Добавить компанию</h1>
+  <input id="companyName" type="text" placeholder="Имя компании">
+  <input id="companyPath" type="text" placeholder="Путь до папки компании">
+  <button id="addCompanyButton">Добавить</button>
+
+  <script>
+    const { ipcRenderer } = require('electron');
+
+    document.getElementById('addCompanyButton').addEventListener('click', async () => {
+      const companyName = document.getElementById('companyName').value;
+      const companyPath = document.getElementById('companyPath').value;
+
+      if (companyName && companyPath) {
+        const result = await ipcRenderer.invoke('add-company', companyName, companyPath);
+        alert(result);
+        window.close(); // Закрыть окно после успешного добавления компании
+      } else {
+        alert('Пожалуйста, заполните все поля.');
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,29 +1,28 @@
 {
-  "name": "mpk_ae",
-  "version": "0.1.0",
-  "private": true,
+  "name": "electron-react-app",
+  "version": "1.0.0",
   "main": "public/electron.js",
-  "dependencies": {
-    "@testing-library/jest-dom": "^5.17.0",
-    "@testing-library/react": "^13.4.0",
-    "@testing-library/user-event": "^13.5.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "react-scripts": "5.0.1",
-    "web-vitals": "^2.1.4",
-    "xlsx": "^0.18.5"
-  },
+  "homepage": "./",
   "scripts": {
-    "start": "react-scripts start",
+    "start2": "react-scripts start",
     "build": "react-scripts build",
     "electron": "electron .",
-    "dev": "concurrently \"npm start\" \"npm run build && npm run electron\""
+    "dev": "concurrently \"npm start2\" \"npm run build && npm run electron\"",
+    "build-react": "react-scripts build",
+    "start-electron": "electron .",
+    "start": "npm run build-react && npm run start-electron",
+    "build-portable": "electron-builder build --dir"
   },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
+  "devDependencies": {
+    "concurrently": "^9.0.1",
+    "electron": "^33.0.2",
+    "electron-builder": "^25.1.8",
+    "wait-on": "^8.0.1"
+  },
+  "dependencies": {
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "react-scripts": "^5.0.0"
   },
   "browserslist": {
     "production": [
@@ -37,12 +36,6 @@
       "last 1 safari version"
     ]
   },
-  "devDependencies": {
-    "concurrently": "^9.0.1",
-    "electron": "^33.0.2",
-    "electron-builder": "^25.1.8",
-    "wait-on": "^8.0.1"
-  },
   "build": {
     "appId": "com.alexeyegoryev.mpk_ae",
     "productName": "MpkAe",
@@ -50,11 +43,19 @@
       "build/**/*",
       "public/electron.js"
     ],
-    "win": {
-      "target": "nsis"
+    "directories": {
+      "buildResources": "assets"
     },
-    "mac": {
-      "category": "public.app-category.utilities"
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "assets/icon.ico",
+      "signAndEditExecutable": false,
+      "sign": false                      
     }
   }
 }

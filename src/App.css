@@ -16,7 +16,7 @@ body {
   overflow-y: hidden;
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: start;
 }
 
 .scrollable-table {

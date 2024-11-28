@@ -1,69 +1,67 @@
 import React, { useState, useEffect } from 'react';
-import './App.css'
+import './App.css';
 
 function App() {
-  const [folderName, setFolderName] = useState('');//nimikenumero
-  const [searchTerm, setSearchTerm] = useState('');//työnumero
+  const [folderName, setFolderName] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const [asiakasNimi, setAsiakasNimi] = useState('');
+  const [asiakasPath, setAsiakasPath] = useState('');
+
   const [searchResults, setSearchResults] = useState([]);
+  const [companies, setCompanies] = useState([]);
+  const [selectedCompany, setSelectedCompany] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
   const [noResults, setNoResults] = useState(false);
   const [pathCheckbox, setPathCheckbox] = useState(false);
   const [pathToBaseDir, setPathToBaseDir] = useState("T:\\Yhteiset\\LAATU\\Mittaukset");
   const [pathToCopyExcel, setPathToCopyExcel] = useState("T:\\Kuvat");
-  const [errorMessage, setErrorMessage] = useState('');
   const [radioButton, setRadioButton] = useState(""); //yritys
 
 
-  const yritykset = ['Ponsse', 'Normet', 'Hydroline', 'Vexve', 'Farmi Forest', 'Parker', 'Hydac', 'Ratesteel'];
-
+  // Загружаем компании из файла companies.json
   useEffect(() => {
-    if (radioButton) {
-      switch (radioButton) {
-        case "Ponsse":
-          setPathToCopyExcel(`T:\\Kuvat\\PONSSE OYJ\\Kuva\\ESITÄYT.MITTAPKR`);
-          break;
-        case "Normet":
-          setPathToCopyExcel(`T:\\Kuvat\\Normet\\ESITMTPKRJ`);
-          break;
-        case "Hydroline":
-          setPathToCopyExcel(`T:\\Kuvat\\Hydroline\\ESITÄYT.MITTAPKR`);
-          break;
-        case "Vexve":
-          setPathToCopyExcel(`T:\\Kuvat\\Vexve\\Esitäyt.mitt`);
-          break;
-        case "Farmi Forest":
-          setPathToCopyExcel(`T:\\Kuvat\\Farmi Forest Oy\\ESITÄYT`);
-          break;
-        case "Parker":
-          setPathToCopyExcel(`T:\\Kuvat\\Parker Hannifin Oy\\MITTAPTKRJA`);
-          break;
-        case "Hydac":
-          setPathToCopyExcel(`T:\\Kuvat\\HYDAC OY\\Kuva\\ESITÄYT`);
-          break;
-        case "Ratesteel":
-          setPathToCopyExcel(`T:\\Kuvat\\Ratesteel Oy\\ESITMTPKRJA`);
-          break;
-        default:
-          break;
-      }
-    }
-  }, [radioButton]);
+    loadCompanies();
+  }, []);
 
+  const loadCompanies = async () => {
+    try {
+      const response = await window.electronAPI.getCompanies();
+      console.log("App-loadCompanies: ", response)
+      setCompanies(response);
+    } catch (error) {
+      console.error('Virhe yritysten latauksessa:', error);
+      setErrorMessage('Yrityslistaa ei onnistuttu lataamaan.');
+    }
+  };
+
+  const addCompany = async (newName, newPath) => {
+    try {
+
+      await window.electronAPI.addCompany(newName, newPath)
+
+    } catch (error) {
+      console.error('Virhe yritysten tallennuksessa:', error);
+      setErrorMessage('Yrityslistaa ei onnistuttu tallentamaan.');
+    }
+  }
 
   const handleSearch = async () => {
     if (!folderName) {
       setErrorMessage('Nimikenumero puuttuu!');
       return;
     }
+
     //setErrorMessage('');
     // Обращаемся к Electron для поиска файлов
     const results = await window.electronAPI.searchFiles(folderName, searchTerm, pathToBaseDir);
 
-    if (results.length === 1 && results[0] === `Kansiota "${folderName}" ei löydy`) {
+    if (results[0] === `Kansiota "${folderName}" ei löydy`) {
       setNoResults(true); // Устанавливаем состояние для отображения кнопки создания
       setSearchResults([]); // Очищаем результаты поиска
     } else {
       setSearchResults(results);
-      setNoResults(results.length === 0 || results[0] === 'Tiedostoja ei löytynyt.'); // Устанавливаем флаг при отсутствии результатов
+      setNoResults(results.length === 0 || results[0] === 'Tiedostoa ei löydy.'); // Устанавливаем флаг при отсутствии результатов
     }
   };
 
@@ -78,9 +76,27 @@ function App() {
   };
 
   const handleCopyAndRenameFile = async () => {
+    if (!folderName) {
+      setErrorMessage('Nimikenumero puuttuu!');
+      return;
+    }
+    if (!searchTerm) {
+      setErrorMessage('Työnumero puuttuu!');
+      return;
+    }
+    if (!selectedCompany) {
+      setErrorMessage('Yritystä ei ole valittu!');
+      return;
+    }
+
+    const selectedCompanyObject = companies.find(c => c.name === selectedCompany);
+    if (!selectedCompanyObject) {
+      setErrorMessage('Valittua yritystä ei löydy.');
+      return;
+    }
 
     try {
-      const result = await window.electronAPI.copyAndRenameExcelFile(folderName, searchTerm, pathToCopyExcel, pathToBaseDir);
+      const result = await window.electronAPI.copyAndRenameExcelFile(folderName, searchTerm, selectedCompanyObject.path, pathToBaseDir);
       setErrorMessage(result)
       //alert(result); // Выводим сообщение об успешном копировании и переименовании
 
@@ -98,14 +114,14 @@ function App() {
     return `${day}.${month}.${year}`;
   };
 
+  const handleUusiAsiakas = async () => {
 
-  const handleOptionChange = (event) => {
-    const selectedValue = event.target.value; // Сохраняем выбранное значение
-    setRadioButton(event.target.value); // Устанавливаем новое значение для radioButton
-    console.log("Selected radio button:", selectedValue);
+    await addCompany(asiakasNimi, asiakasPath);
+    setAsiakasNimi('');
+    setAsiakasPath('');
 
-  };
-
+    await loadCompanies();
+  }
 
   const handleCreateFile = async () => {
     if (!searchTerm) {
@@ -113,18 +129,14 @@ function App() {
       return;
     }
 
-    if (!radioButton) {
-      setErrorMessage("Asiakas puuttuu!");
+    if (!selectedCompany) {
+      setErrorMessage("Asiakas puuttuu!")
       return;
     }
-
-
 
     setErrorMessage('');
     await handleCopyAndRenameFile();
     await handleSearch()
-    //setPathToCopyExcel("T:\\Kuvat")
-
   };
 
   return (
@@ -140,7 +152,7 @@ function App() {
           name="path"
           checked={pathCheckbox}
           onChange={() => setPathCheckbox(!pathCheckbox)} />
-        <label for="path">Muuttaa polkuja</label>
+        <label for="path">Options</label>
       </div>
 
       {pathCheckbox && (
@@ -152,49 +164,63 @@ function App() {
             value={pathToBaseDir}
             onChange={(e) => setPathToBaseDir(e.target.value)}
             style={{ marginRight: "10px" }} />
-          <label htmlFor="baseDirPath">Polku T:\Yhteiset\LAATU\Mittaukset</label>
+          <label htmlFor="baseDirPath">Mittauspöytäkirjan kansiopolku</label>
           <br />
-
 
 
           <input
             type='text'
-            id='mpkMalli'
-            value={pathToCopyExcel}
-            onChange={(e) => setPathToCopyExcel(e.target.value)}
+            id='uusiAsiakasNimi'
+            value={asiakasNimi}
+            onChange={(e) => setAsiakasNimi(e.target.value)}
             style={{ marginRight: "10px" }} />
-          <label htmlFor="mpkMalli">Polku josta etsimme MPKirjan mallia</label>
+          <label htmlFor="uusiAsiakasNimi">Uusi asiakas</label>
           <br />
 
+
+          <input
+            type='text'
+            id='uusiAsiakasPath'
+            value={asiakasPath}
+            onChange={(e) => setAsiakasPath(e.target.value)}
+            style={{ marginRight: "10px" }} />
+          <label htmlFor="uusiAsiakasPath">Polku</label>
+          <br />
+          <br />
+
+          <button onClick={handleUusiAsiakas}>Uusi asiakas</button>
+          <br />
+          <br />
         </div>
       )}
+      <div>{/* Ввод данных поиска */}
 
-      <div>
-        <input
-          type="text"
-          placeholder="Nimikenumero"
-          value={folderName}
-          onChange={(e) => setFolderName(e.target.value)}
-          style={{ marginRight: '10px' }}
-        />
-      </div>
+        <div>
+          <input
+            type="text"
+            placeholder="Nimikenumero"
+            value={folderName}
+            onChange={(e) => setFolderName(e.target.value)}
+            style={{ marginRight: '10px' }}
+          />
+        </div>
 
-
-      <div style={{ marginTop: '10px' }}>
-        <input
-          type="text"
-          placeholder="Työnumero"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          style={{ marginRight: '10px' }}
-        />
-        <button onClick={handleSearch}>Etsiä</button>
+        <div style={{ marginTop: '10px' }}>
+          <input
+            type="text"
+            placeholder="Työnumero"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{ marginRight: '10px' }}
+          />
+        </div>
+        <button onClick={handleSearch}>Haku</button>
       </div>
 
       {/* Таблица с результатами поиска */}
       <div style={{ marginTop: '20px' }}>
-        
-        {searchResults.length > 0 && searchResults[0] !== 'Tiedostoja ei löytynyt.' ? (
+
+        {searchResults.length > 0 && searchResults[0] !== 'Tiedostoa ei löydy.' ? (
           <div className="scrollable-table">
             <h3>Tulos:</h3>
             <table border="1" cellPadding="10" cellSpacing="0">
@@ -239,8 +265,39 @@ function App() {
         ) : (
           noResults && (
             <div>
-              <p>Tiedostoja ei löytynyt.</p>
-              <p>Asiakas:</p>
+              <p>Tiedostoa ei löydy.</p>
+              <div style={{ marginBottom: '20px' }}>
+                <label>Valitse asiakas:</label>
+                <select
+                  value={selectedCompany}
+                  onChange={(e) => setSelectedCompany(e.target.value)}>
+                  <option value="" disabled>Valitse asiakas...</option>
+                  {companies.map((company, index) => (
+                    <option key={index} value={company.name}>
+                      {company.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+
+              <button onClick={handleCreateFile}>Luo uusi mittauspöytäkirja</button>
+            </div>
+          )
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default App;
+
+
+
+
+
+/*
+
               <div className="radio-group">
                 {yritykset.map((yritys, index) => (
                   <label key={index} className="radio-label">
@@ -254,13 +311,47 @@ function App() {
                   </label>
                 ))}
               </div>
-              <button onClick={handleCreateFile}>Luoda mittauspöytäkirja</button>
-            </div>
-          )
-        )}
-      </div>
-    </div>
-  );
-}
 
-export default App;
+
+
+
+
+              
+      <div>
+        <input
+          type="checkbox"
+          id="path"
+          name="path"
+          checked={pathCheckbox}
+          onChange={() => setPathCheckbox(!pathCheckbox)} />
+        <label for="path">Muuttaa polkuja</label>
+      </div>
+
+      {pathCheckbox && (
+        <div style={{ marginTop: "10px" }}>
+
+          <input
+            type='text'
+            id='baseDirPath'
+            value={pathToBaseDir}
+            onChange={(e) => setPathToBaseDir(e.target.value)}
+            style={{ marginRight: "10px" }} />
+          <label htmlFor="baseDirPath">Polku T:\Yhteiset\LAATU\Mittaukset</label>
+          <br />
+
+
+
+          <input
+            type='text'
+            id='mpkMalli'
+            value={pathToCopyExcel}
+            onChange={(e) => setPathToCopyExcel(e.target.value)}
+            style={{ marginRight: "10px" }} />
+          <label htmlFor="mpkMalli">Polku josta etsimme MPKirjan mallia</label>
+          <br />
+
+        </div>
+      )}
+
+
+              */
