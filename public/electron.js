@@ -2,7 +2,7 @@
 const { app, BrowserWindow, Menu, ipcMain, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const xlsx = require('xlsx');
+const XlsxPopulate = require('xlsx-populate');
 
 let mainWindow;
 
@@ -147,6 +147,17 @@ ipcMain.handle('open-file', async (event, folderName, fileName, pathToBaseDir) =
   }
 });
 
+ipcMain.handle('open-file-saha', async (event, folderName, fileName, malliToBaseDir) => {
+  const filePath = path.join(malliToBaseDir, folderName, fileName);
+
+  // Проверяем, существует ли файл перед открытием
+  if (fs.existsSync(filePath)) {
+    await shell.openPath(filePath);
+  } else {
+    return `Tiedostoa ${fileName} ei löydy.`;
+  }
+});
+
 // Функция для рекурсивного поиска файлов в папках и подпапках
 function searchFilesRecursive(directoryPath, searchTerm) {
   let results = "";
@@ -259,21 +270,125 @@ ipcMain.handle('copy-and-rename-excel-file-saha', async (event, folderName, sear
     fs.copyFileSync(folderFrom, destinationPath);
 
     // Открываем скопированный файл для редактирования
-    const workbook = xlsx.readFile(destinationPath);
-    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+    const workbook = await XlsxPopulate.fromFileAsync(destinationPath);
+    const sheet = workbook.sheet(0);
 
-    // Добавляем данные в ячейку B6, B7 и B8
-    worksheet['B6'] = { t: 's', v: searchTerm }; // Задаем новое значение для ячейки B6
-    worksheet['B7'] = { t: 's', v: material };
-    worksheet['B7'] = { t: 's', v: sahaMitat };
+    // Устанавливаем значения в ячейки B6, B7 и B8
+    sheet.cell("B6").value(searchTerm);
+    sheet.cell("B7").value(material);
+    sheet.cell("B8").value(sahaMitat);
 
-
-    // Сохраняем изменения в файле
-    xlsx.writeFile(workbook, destinationPath);
+    // Сохраняем файл
+    await workbook.toFileAsync(destinationPath);
 
     return `Tiedosto ${upperFolderName} kopioitiin onnistuneesti kansioon ${folderPath}.`;
   } catch (error) {
     console.error('Virhe kopioitaessa tiedostoa:', error);
     return `Virhe kopioitaessa tiedostoa: ${error.message}`;
+  }
+});
+
+ipcMain.handle("create-folders", async (event, cmm, romer, folderName, pathToBaseDir) => {
+  const name = folderName.toUpperCase()
+  const pathFrom = "T:\\Kuvat";
+  const pathTo = path.join(pathToBaseDir, name);
+  let message = ""
+
+  
+  if(cmm && !fs.existsSync(path.join(pathTo, "CMM Ohjelma"))){
+    fs.mkdirSync(path.join(pathTo, "CMM Ohjelma"), { recursive: true });
+    fs.mkdirSync(path.join(pathTo, "CMM Raportti"));
+  }
+  if(romer && !fs.existsSync(path.join(pathTo, "ROMER Ohjelma"))){
+    fs.mkdirSync(path.join(pathTo, "ROMER Ohjelma"), { recursive: true });
+    fs.mkdirSync(path.join(pathTo, "ROMER Raportti"));
+  }
+  if (!fs.existsSync(path.join(pathTo, "Jigi"))) {
+    fs.mkdirSync(path.join(pathTo, "Jigi"));
+  }
+  if (!fs.existsSync(path.join(pathTo, "Mittapöytäkirjat"))) {
+    fs.mkdirSync(path.join(pathTo, "Mittapöytäkirjat"));
+  }
+
+  const kuva = await searchFilesRecursive2(pathFrom, name, ["pdf", "PDF"])
+  const step = await searchFilesRecursive2(pathFrom, name, ["step", "STEP", "stp", "STP"])
+  const mittausKirja = await searchFilesRecursive2(pathFrom, name, ["xls", "xlsx"])
+
+  if (kuva){
+    createShortcutLink(kuva, path.join(pathTo, `${name} KUVA.lnk`))
+    message += "Kuva luotu\n"
+  } else {
+    message += "Kuvaa ei löydy \n"
+  }
+
+  if (step){
+    createShortcutLink(step, path.join(pathTo, `${name} STEP.lnk`))
+    message += "Step luotu\n"
+  } else {
+    message += "Step ei löydy \n"
+  }
+
+  if (mittausKirja){
+    createShortcutLink(mittausKirja, path.join(pathTo, `${name} MITTAPÖYTÄKIRJA.lnk`))
+    message += "Mittauspöytäkirja luotu\n"
+  } else {
+    message += "Mittauspöytäkirjaa ei löydy \n"
+  }
+
+  if (cmm) {
+    const cmmProgramPath = path.join(pathTo, "CMM Ohjelma", `${name}.PRG`);
+    createShortcutLink(cmmProgramPath, path.join(pathTo, `${name} CMM Ohjelma.lnk`));
+    message += "CMM Ohjelman pikakuvake luotu\n";
+  }
+
+  if (romer) {
+    const romerProgramPath = path.join(pathTo, "ROMER Ohjelma", `${name}.mcam`);
+    createShortcutLink(romerProgramPath, path.join(pathTo, `${name} ROMER Ohjelma.lnk`));
+    message += "ROMER Ohjelman pikakuvake luotu\n";
+  }
+
+  return message
+})
+
+function createShortcutLink(pathFrom, pathTo){
+  shell.writeShortcutLink(pathTo, {
+    target: pathFrom,
+    type: "link"
+  })
+}
+
+
+function searchFilesRecursive2(directoryPath, searchTerm, rash) {
+  let results = "";
+
+  const filesAndDirs = fs.readdirSync(directoryPath, { withFileTypes: true });
+
+  filesAndDirs.forEach(entry => {
+    const fullPath = path.join(directoryPath, entry.name);
+
+    if (entry.isDirectory()) {
+      // Если текущая запись - директория, вызываем функцию рекурсивно
+      results = results.concat(searchFilesRecursive2(fullPath, searchTerm, rash));
+    } else if (entry.isFile()) {
+      // Проверяем, заканчивается ли имя файла на одно из расширений в массиве rash
+      const fileExtension = entry.name.split('.').pop().toLowerCase();
+      if (rash.includes(fileExtension)) {
+        if (!searchTerm || entry.name.toLowerCase().includes(searchTerm.toLowerCase())) {
+          results = fullPath;
+        }
+      }
+    }
+  });
+
+  return results;
+}
+
+// Открытие файла через shell
+ipcMain.handle('open-folder', async (event, folderName,  pathToBaseDir) => {
+  const filePath = path.join(pathToBaseDir, folderName);
+
+  // Проверяем, существует ли файл перед открытием
+  if (fs.existsSync(filePath)) {
+    await shell.openPath(filePath);
   }
 });

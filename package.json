@@ -20,11 +20,13 @@
     "wait-on": "^8.0.1"
   },
   "dependencies": {
+    "@nosferatu500/react-sortable-tree": "^4.4.0",
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
     "react-scripts": "^5.0.0",
     "react-tabs": "^6.0.2",
-    "xlsx": "^0.18.5"
+    "xlsx": "^0.18.5",
+    "xlsx-populate": "^1.21.0"
   },
   "browserslist": {
     "production": [

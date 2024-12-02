@@ -22,8 +22,10 @@ function App() {
   const [noResults, setNoResults] = useState(false);
   const [pathCheckbox, setPathCheckbox] = useState(false);
   const [pathToBaseDir, setPathToBaseDir] = useState("T:\\Yhteiset\\LAATU\\Mittaukset");
-  const [pathToCopyExcel, setPathToCopyExcel] = useState("T:\\Kuvat");
-  const [radioButton, setRadioButton] = useState(""); //yritys
+
+  const [cmm, setCmm] = useState(true); //yritys
+  const [romer, setRomer] = useState(true);
+  const [naytaVaiEi, setNaytaVaiEi] = useState(false);
 
 
   // Загружаем компании из файла companies.json
@@ -58,7 +60,7 @@ function App() {
       setErrorMessage('Nimikenumero puuttuu!');
       return;
     }
-    
+
     //setErrorMessage('');
 
     // Обращаемся к Electron для поиска файлов
@@ -73,16 +75,18 @@ function App() {
     }
   };
 
+
+
   const handleSearchSaha = async () => {
     if (!folderName) {
       setErrorMessage('Nimikenumero puuttuu!');
       return;
     }
-    
+
     //setErrorMessage('');
 
     // Обращаемся к Electron для поиска файлов
-    const results = await window.electronAPI.searchFiles(folderName, searchTerm, malliToBaseDir);
+    const results = await window.electronAPI.searchFilesSaha(folderName, searchTerm, malliToBaseDir);
 
     if (results[0] === `Kansiota "${folderName}" ei löydy`) {
       setNoResults(true); // Устанавливаем состояние для отображения кнопки создания
@@ -102,6 +106,23 @@ function App() {
       console.error('Virhe:', error);
     }
   };
+
+  const handleOpenFileSaha = async (fileName) => {
+    try {
+      const result = await window.electronAPI.openFileSaha(folderName, fileName, malliToBaseDir);
+      setErrorMessage(result)
+    } catch (error) {
+      console.error('Virhe:', error);
+    }
+  };
+  const handleOpenFolder = async (folderName) => {
+    try {
+      const result = await window.electronAPI.openFolder(folderName, pathToBaseDir);
+    } catch (error) {
+      console.error('Virhe:', error);
+    }
+  };
+
 
   const handleCopyAndRenameFile = async () => {
     if (!folderName) {
@@ -181,7 +202,7 @@ function App() {
       setErrorMessage("Nimikenumero puuttuu!")
       return;
     }
-    
+
     setErrorMessage('');
     await handleCopyAndRenameFile();
     await handleSearch()
@@ -197,16 +218,61 @@ function App() {
       setErrorMessage("Nimikenumero puuttuu!")
       return;
     }
-    
+
     setErrorMessage('');
     await handleCopyAndRenameFileSaha();
     await handleSearchSaha()
   };
 
+  const handleLuoKansioita = async () => {
+    if (!folderName) {
+      setErrorMessage("Nimikenumero puuttuu!")
+      return;
+    }
+
+    if (!selectedCompany) {
+      setErrorMessage('Yritystä ei ole valittu!');
+      return;
+    }
+
+    const selectedCompanyObject = companies.find(c => c.name === selectedCompany);
+
+    try {
+      const result = await window.electronAPI.luoKansioita(folderName, selectedCompanyObject.path);
+      setErrorMessage(result)
+
+    } catch (error) {
+      console.error('Virhe:', error);
+    }
+  }
+
+  const handleKansiodenLuonti = async () => {
+    if ((cmm || romer) && folderName) {
+      try {
+
+        const luoKansiot = await window.electronAPI.createFolders(cmm, romer, folderName, pathToBaseDir)
+        setNaytaVaiEi(true)
+        setErrorMessage(luoKansiot)
+      }
+      catch (error) {
+        console.log('Virhe kansioiden luonnissa:', error)
+        setErrorMessage('Virhe kansioiden luonnissa.')
+      }
+    } else {
+      setErrorMessage("Valitse CMM tai Romer (tai molemmat) ja syötä nimikenumero")
+    }
+  }
+
+  const handleTabSelect = () => {
+    setErrorMessage("")
+    setNaytaVaiEi(false)
+  }
+
+
   return (
 
     <div className="App">
-      <Tabs>
+      <Tabs onSelect={handleTabSelect}>
         <TabList className="my-tab-list">
           <Tab className="my-tab" selectedClassName="my-selected-tab">Haku</Tab>
           <Tab className="my-tab" selectedClassName="my-selected-tab">Saha</Tab>
@@ -440,7 +506,7 @@ function App() {
                             <td>{nimikenumero}</td>
                             <td>
                               <button
-                                onClick={() => handleOpenFile(file)}
+                                onClick={() => handleOpenFileSaha(file)}
                                 style={{
                                   color: 'blue',
                                   textDecoration: 'underline',
@@ -494,8 +560,64 @@ function App() {
         </TabPanel>
 
         <TabPanel>
-          
+          <div>
+
+            <h4>Kansioiden luonti</h4>
+            <input
+              type="checkbox"
+              id="CMM"
+              name='CMM'
+              checked={cmm}
+              onChange={() => setCmm(!cmm)} />
+            <label for="CMM">CMM</label>
+            <br />
+
+            <input
+              type="checkbox"
+              id="ROMER"
+              name='ROMER'
+              checked={romer}
+              onChange={() => setRomer(!romer)} />
+            <label for="ROMER">Romer</label>
+            <br />
+
+            <input
+              type="text"
+              id="nimikeNro"
+              name="nimikeNro"
+              checked={folderName}
+              onChange={(e) => setFolderName(e.target.value)} />
+            <label for="nimikeNro">Nimikenumero</label>
+            <br />
+
+            <button onClick={handleKansiodenLuonti}>
+              Luo
+            </button>
+            <br />
+          </div>
+
+          <div>
+            {naytaVaiEi && <p style={{ color: 'blue', whiteSpace: "pre-line" }}>{errorMessage}</p>}
+          </div>
+
+          {naytaVaiEi && (
+            <button
+              onClick={() => handleOpenFolder(folderName)}
+              style={{
+                color: 'blue',
+                textDecoration: 'underline',
+                background: 'none',
+                border: 'none',
+                padding: 0,
+                cursor: 'pointer',
+              }}
+            >
+              Avaa luodut kansiot
+            </button>
+          )}
+
         </TabPanel>
+
       </Tabs>
     </div>
 
@@ -505,65 +627,69 @@ function App() {
 export default App;
 
 
-
-
-
 /*
 
-              <div className="radio-group">
-                {yritykset.map((yritys, index) => (
-                  <label key={index} className="radio-label">
-                    <input
-                      type="radio"
-                      value={yritys}
-                      checked={radioButton === yritys}
-                      onChange={handleOptionChange}
-                    />
-                    {yritys}
-                  </label>
+
+
+<TabPanel>
+
+          {errorMessage && <p style={{ color: 'blue' }}>{errorMessage}</p>}
+
+          <div>
+            <input
+              type="checkbox"
+              id="path"
+              name="path"
+              checked={pathCheckbox}
+              onChange={() => setPathCheckbox(!pathCheckbox)} />
+            <label for="path">Options</label>
+          </div>
+
+          {pathCheckbox && (
+            <div style={{ marginTop: "10px" }}>
+
+              <input
+                type='text'
+                id='baseDirPath'
+                value={pathToBaseDir}
+                onChange={(e) => setPathToBaseDir(e.target.value)}
+                style={{ marginRight: "10px" }} />
+              <label htmlFor="baseDirPath">Mittauspöytäkirjan kansiopolku</label>
+              <br />
+
+            </div>
+          )}
+
+          <div style={{ marginTop: "10px" }}>
+            <div>
+              <input
+                type="text"
+                placeholder="Nimikenumero"
+                value={folderName}
+                onChange={(e) => setFolderName(e.target.value)}
+                style={{ marginRight: '10px' }}
+              />
+            </div>
+            <br />
+            <div style={{ marginBottom: '20px' }}>
+              <label>Valitse asiakas:</label>
+              <select
+                value={selectedCompany}
+                onChange={(e) => setSelectedCompany(e.target.value)}>
+                <option value="" disabled>Valitse asiakas...</option>
+                {companies.map((company, index) => (
+                  <option key={index} value={company.name}>
+                    {company.name}
+                  </option>
                 ))}
-              </div>
+              </select>
+            </div>
+            <br />
+            <button onClick={handleLuoKansioita}>Luo kansioita ja tiedostoja</button>
+            <br />
 
+            
 
-
-
-
-              
-      <div>
-        <input
-          type="checkbox"
-          id="path"
-          name="path"
-          checked={pathCheckbox}
-          onChange={() => setPathCheckbox(!pathCheckbox)} />
-        <label for="path">Muuttaa polkuja</label>
-      </div>
-
-      {pathCheckbox && (
-        <div style={{ marginTop: "10px" }}>
-
-          <input
-            type='text'
-            id='baseDirPath'
-            value={pathToBaseDir}
-            onChange={(e) => setPathToBaseDir(e.target.value)}
-            style={{ marginRight: "10px" }} />
-          <label htmlFor="baseDirPath">Polku T:\Yhteiset\LAATU\Mittaukset</label>
-          <br />
-
-
-
-          <input
-            type='text'
-            id='mpkMalli'
-            value={pathToCopyExcel}
-            onChange={(e) => setPathToCopyExcel(e.target.value)}
-            style={{ marginRight: "10px" }} />
-          <label htmlFor="mpkMalli">Polku josta etsimme MPKirjan mallia</label>
-          <br />
-
-        </div>
-      )}
-
-
-              */
+          </div>
+        </TabPanel>
+*/
