@@ -342,7 +342,7 @@ function App() {
                   placeholder="Nimikenumero"
                   value={folderName}
                   onChange={(e) => setFolderName(e.target.value)}
-                  style={{ margin: '10px' }}
+                  style={{ marginTop: '5px' }}
                 />
                 <br />
                 <input 
@@ -350,23 +350,19 @@ function App() {
                   placeholder="Työnumero"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  style={{ margin: '10px' }}
+                  style={{ marginTop: '5px' }}
                 />
               </div>
-              <button style={{margin: '10px'}} onClick={handleSearch}>Haku</button>
+              <button style={{marginTop: '5px'}} onClick={handleSearch}>Haku</button>
             </div>
 
             {/* Таблица с результатами поиска */}
-            <div style={{ marginTop: '20px',
-              overflowX: 'auto',
-              overflowY: 'auto',
-              width: '100%'
-             }}>
+            <div className='scrollable-table'>
 
               {searchResults.length > 0 && searchResults[0] !== 'Tiedostoa ei löydy.' ? (
                 <div>
                   <h3>Tulos:</h3>
-                  <table border="1" cellPadding="10" cellSpacing="0" style={{ minWidth: '600px', width: '100%', overflow: 'auto'}}>
+                  <table border="1" cellPadding="10" cellSpacing="0" style={{ width: '100%'}}>
                     <thead>
                       <tr>
                         <th><strong>Nimikenumero</strong></th>
@@ -424,7 +420,7 @@ function App() {
                     </div>
 
 
-                    <button style={{margin: '10px'}} onClick={handleCreateFile}>Luo uusi mittauspöytäkirja</button>
+                    <button style={{marginTop: '5px'}} onClick={handleCreateFile}>Luo uusi mittauspöytäkirja</button>
                   </div>
                 )
               )}
@@ -594,10 +590,10 @@ function App() {
               name="nimikeNro"
               checked={folderName}
               onChange={(e) => setFolderName(e.target.value)} />
-            <label for="nimikeNro">Nimikenumero</label>
+              <label for="nimikeNro">Nimikenumero</label>
             <br />
 
-            <button onClick={handleKansiodenLuonti}>
+            <button style={{marginTop: '5px'}} onClick={handleKansiodenLuonti}>
               Luo
             </button>
             <br />
