@@ -52,8 +52,8 @@ app.on('window-all-closed', () => {
 });
 
 //const companyDataPath = path.join(__dirname, "..", 'resources', 'companies.json');
-const companyDataPath = path.join(app.getPath('userData'), 'companies.json');
-
+//const companyDataPath = path.join(app.getPath('userData'), 'companies.json');
+const companyDataPath = "T:\\Yhteiset\\LAATU\\Mittaukset\\1_TIEDOSTOJENKÄSITTELY\\Mittapöytäkirjat_uusi\\Asiakas-json\\companies.json"
 
 // Сохранение информации о компании
 ipcMain.handle('add-company', async (event, companyName, companyPath) => {

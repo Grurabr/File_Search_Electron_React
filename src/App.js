@@ -271,20 +271,21 @@ function App() {
 
   return (
 
-    <div className="App">
+    <div className="App" style={{width: '100%', padding: '5px'}}>
       <Tabs onSelect={handleTabSelect}>
         <TabList className="my-tab-list">
           <Tab className="my-tab" selectedClassName="my-selected-tab">Haku</Tab>
-          <Tab className="my-tab" selectedClassName="my-selected-tab">Saha</Tab>
           <Tab className="my-tab" selectedClassName="my-selected-tab">Laatu</Tab>
         </TabList>
 
         <TabPanel>
           {/* Haku */}
-          <div style={{ padding: '20px' }}>
+          <div style={{
+            width: '100%'
+           }}>
 
             {errorMessage && <p style={{ color: 'blue' }}>{errorMessage}</p>}
-
+            {/*
             <div>
               <input
                 type="checkbox"
@@ -294,7 +295,7 @@ function App() {
                 onChange={() => setPathCheckbox(!pathCheckbox)} />
               <label for="path">Options</label>
             </div>
-
+              */}
             {pathCheckbox && (
               <div style={{ marginTop: "10px" }}>
 
@@ -341,27 +342,31 @@ function App() {
                   placeholder="Nimikenumero"
                   value={folderName}
                   onChange={(e) => setFolderName(e.target.value)}
-                  style={{ marginRight: '10px' }}
+                  style={{ margin: '10px' }}
                 />
                 <br />
-                <input
+                <input 
                   type="text"
                   placeholder="Työnumero"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  style={{ marginRight: '10px' }}
+                  style={{ margin: '10px' }}
                 />
               </div>
-              <button onClick={handleSearch}>Haku</button>
+              <button style={{margin: '10px'}} onClick={handleSearch}>Haku</button>
             </div>
 
             {/* Таблица с результатами поиска */}
-            <div style={{ marginTop: '20px' }}>
+            <div style={{ marginTop: '20px',
+              overflowX: 'auto',
+              overflowY: 'auto',
+              width: '100%'
+             }}>
 
               {searchResults.length > 0 && searchResults[0] !== 'Tiedostoa ei löydy.' ? (
-                <div className="scrollable-table">
+                <div>
                   <h3>Tulos:</h3>
-                  <table border="1" cellPadding="10" cellSpacing="0">
+                  <table border="1" cellPadding="10" cellSpacing="0" style={{ minWidth: '600px', width: '100%', overflow: 'auto'}}>
                     <thead>
                       <tr>
                         <th><strong>Nimikenumero</strong></th>
@@ -409,7 +414,7 @@ function App() {
                       <select
                         value={selectedCompany}
                         onChange={(e) => setSelectedCompany(e.target.value)}>
-                        <option value="" disabled>Valitse asiakas...</option>
+                        <option value="0">Kaikki</option>
                         {companies.map((company, index) => (
                           <option key={index} value={company.name}>
                             {company.name}
@@ -419,16 +424,16 @@ function App() {
                     </div>
 
 
-                    <button onClick={handleCreateFile}>Luo uusi mittauspöytäkirja</button>
+                    <button style={{margin: '10px'}} onClick={handleCreateFile}>Luo uusi mittauspöytäkirja</button>
                   </div>
                 )
               )}
             </div>
           </div>
         </TabPanel>
-
+{/*
         <TabPanel>
-          {/* Saha */}
+          {/* Saha 
           <div style={{ padding: '20px' }}>
 
             {errorMessage && <p style={{ color: 'blue' }}>{errorMessage}</p>}
@@ -481,7 +486,7 @@ function App() {
             </div>
 
 
-            {/* Таблица с результатами поиска */}
+            {/* Таблица с результатами поиска 
             <div style={{ marginTop: '20px' }}>
 
               {searchResults.length > 0 && searchResults[0] !== 'Tiedostoa ei löydy.' ? (
@@ -558,9 +563,11 @@ function App() {
             </div>
           </div>
         </TabPanel>
-
+*/}
         <TabPanel>
-          <div>
+          <div style={{
+            width: '100%'
+           }}>
 
             <h4>Kansioiden luonti</h4>
             <input
@@ -628,8 +635,7 @@ export default App;
 
 
 /*
-
-
+<Tab className="my-tab" selectedClassName="my-selected-tab">Saha</Tab>
 
 <TabPanel>
 
